@@ -245,6 +245,10 @@ hr {
   margin: 0 auto;
   width: 75rem;
   max-width: calc(100% - 6rem); }
+  .inner iframe{
+    width: 70%;
+    height: 400px;
+  }
   @media screen and (max-width: 480px) {
     .inner {
       max-width: calc(100% - 3rem); } }
@@ -1503,7 +1507,7 @@ ul.actions {
   .row {
     display: flex;
     flex-wrap: wrap;
-    box-sizing: border-box; }
+    box-sizing: content-box; }
     .row > * {
       box-sizing: border-box; }
     .row.gtr-uniform > * > :last-child {
