@@ -1,0 +1,270 @@
+<!DOCTYPE HTML>
+<!--
+	Industrious by TEMPLATED
+	templated.co @templatedco
+	Released for free under the Creative Commons Attribution 3.0 license (templated.co/license)
+-->
+<html>
+	<head>
+		<title>Lab 1</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<meta name="description" content="" />
+		<meta name="keywords" content="" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+	</head>
+	<body class="is-preload">
+
+		<!-- Header -->
+			<header id="header">
+				<a class="logo" href="index.html"></a>
+				<nav>
+					<a href="#menu">Menu</a>
+				</nav>
+			</header>
+
+		<!-- Nav -->
+			<nav id="menu">
+				<ul class="links">
+					<li><a href="index.html">Home</a></li>
+					<li><a href="labs.html">Labs</a></li>
+					<li><a href="milestones.html">Milestones</a></li>
+					<li><a href="logistics.html">Team Logistics</a></li>
+					<li><a href="code_repo.html">Code Repo</a></li>
+				</ul>
+			</nav>
+
+		<!-- Heading -->
+			<div id="heading" >
+				<h1>Lab 1: Microcontroller</h1>
+			</div>
+
+		<!-- Main -->
+			<section id="main" class="wrapper">
+				<div class="inner">
+					<div class="content">
+						<h3>Goals</h3>
+							<ul>
+								<li>Learn the basics of Arduino by controlling LEDs and motors.</li>
+								<li>Assemble a basic body for the robot.</li>
+								<li>Program the robot to move in a square shaped path.</li>
+							</ul>
+						<hr />
+
+						<h3>Sub-teams</h3>
+						<p><b>Subteam 1: </b>Hadi and Alberto</p>
+						<p><b>Subteam 2: </b>Ian and Yanrui</p>
+						<hr />
+
+						<h3>Prelab</h3>
+						<p><a href="https://www.arduino.cc/en/Main/Software">Click here </a>to download the Arduino IDE. After installing it, you should be able to see something like this:</p>
+						<img src="images/Lab1/arduino_IDE.png"/>
+						<hr />
+
+						<h3>Internal LED blink</h3>
+						<p><b>Firstly</b>, open the Arduino IDE -> File -> Examples -> 1.Basics -> Blink. <b>Then</b>, click the <b>checkmark</b> to compile the code -> click the <b>right arrow</b> to upload the code to the Arduino. Following these instructions, we made the built-in LED blink, as seen in the video below. <b>Warning!!</b> Make sure your Arduino IDE is connected to right COM port. You can verify this by navigating to Tools -> Ports.</p>
+						<iframe src="https://www.youtube.com/embed/iQ6RLm8GsXc" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>[Code for this step]</p>
+						<pre><code>
+// the setup function runs once when you press reset or power the board
+void setup() {
+  // initialize digital pin LED_BUILTIN as an output.
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+// the loop function runs over and over again forever
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(1000);                       // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making   the voltage LOW
+  delay(1000);                       // wait for a second
+}
+						</code></pre>
+						<hr />
+
+						<h3>External LED blink</h3>
+						<p>After Internal LED Blink, let us blink an External LED! Pick up an LED and a resistor. Then, connect the LED and Resistor on breadboard, use a different pin and modify to blink Internal LED. Great! The External LED blinks, see the video below. <b>Warning!!</b> Make sure your LED is connected to a resistor at least 300ohm, unless you want to blow up your Arduino.</p>
+						<iframe src="https://www.youtube.com/embed/0pE7rAklaJY" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>[Code for this step]</p>
+						<pre><code>
+// the setup function runs once when you press reset or power the    board
+int led_pin = 10; //pin connected to external LED
+void setup() {
+  // initialize digital pin LED_BUILTIN as an output.
+  pinMode(led_pin, OUTPUT);
+}
+
+// the loop function runs over and over again forever
+void loop() {
+  digitalWrite(led_pin, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(1000);                       // wait for a second
+  digitalWrite(led_pin, LOW);    // turn the LED off by making   the voltage LOW
+  delay(1000);                       // wait for a second
+}
+						</code></pre>
+						<hr />
+
+						<h3>Read the potentiometer</h3>
+						<p>After External LED Blink, Let us Read Analog value of Potentiometer! Pick up a potentiometer and a resistor. Then, connect the potentiometer and resistor on breadboard, use the Analog Pin A0 and write code to read the value. Remember to click Serial monitor to see the value (on the top right of Arduino IDE). Cool! Get the value of the potentiometer, see the video below. <b>Warning!!</b> Make sure your Potentiometer is connected to a Resistor at least 300ohm, unless you want to blow up your Arduino.</p>
+						<iframe src="https://www.youtube.com/embed/qJ6spCfECX0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>[Code for this step]</p>
+						<pre><code>
+int analog_pin = A0;
+
+void setup() {
+  // initialize serial communication at 9600 bits per second:
+  Serial.begin(9600);
+}
+
+void loop() {
+  // read the input pin:
+  value_analogRead = analogRead(analog_pin);
+  Serial.println(Value_analogRead);
+  delay(10);        // delay in between reads for stability
+}
+						</code></pre>
+						<hr />
+
+						<h3>Analog Output (PWM)</h3>
+						<p>In this step, we connect the previous two steps to read the value of potentiometer and put the output to External LED. <b>Note</b> you can learn PWM <a href="https://cei-lab.github.io/ece3400-2017/tutorials/PWM/PWM.html">here</a>.</p>
+						<iframe src="https://www.youtube.com/embed/FzOQpxXkZDM" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>[Code for this step]</p>
+						<pre><code>
+#include <'Servo.h>
+int MAX_READING = 1023;
+int analog_pin = A0;
+int led_pin = 11;
+
+void start_now() {
+  Serial.begin(9600);
+  pinMode(analog_pin, INPUT);
+  pinMode(led_pin, OUTPUT);
+}
+void setup() {
+  start_now();
+}
+void loop() {
+  int value_analogRead = analogRead(analog_pin);
+  Serial.print(value_analogRead*5.0/MAX_READING);
+  Serial.println(" Volts");
+  output_to_led(value_analogRead);
+}
+void output_to_led(int value) {
+  int new_value=map(value,0,MAX_READING,0,255);
+  analogWrite(led_pin,new_value);
+}
+						</code></pre>
+						<hr />
+
+						<h3>Parallax Servos</h3>
+						<p>Pick up a Parallax Servo. Remember: Red Line = Vcc, Black Line = GND, White Line = Signal. Unlike a regular servo that is usually limited to 180 degrees and control the angle, a continuous servo (like the one used for this lab) can be controlled with direction and speed.</p> 
+						<p>Click File -> Examples -> Servo -> knop to open your demo code. Then connect your previous coding with the servo. To make the servo move, connect the previous three steps. See the video below.</p>
+						<iframe src="https://www.youtube.com/embed/gK3PRNAZcIo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>[Code for this step]</p>
+						<pre><code>
+#include <'Servo.h>
+int MAX_READING = 1023;
+int analog_pin = A0;
+int led_pin = 11;
+int Servo_pin = 5;
+Servo MyServo;
+
+void start_now() {
+  Serial.begin(9600);
+  pinMode(analog_pin, INPUT);
+  pinMode(led_pin, OUTPUT);
+  MyServo.attach(Servo_pin);
+}
+void setup() {
+  start_now();
+}
+void loop() {
+  int value_analogRead = analogRead(analog_pin);
+  Serial.print(value_analogRead*5.0/MAX_READING);
+  Serial.println(" Volts");
+  output_to_led(value_analogRead);
+  move_motor(MyServo, value_analogRead);
+}
+void output_to_led(int value) {
+  int new_value=map(value,0,MAX_READING,0,255);
+  analogWrite(led_pin,new_value);
+}
+void move_motor(Servo motor, int value){
+  int new_value=map(value,0,MAX_READING,0,255);
+  motor.write(new_value);
+}
+						</code></pre>
+						<hr />
+
+						<h3>Assembling the robot</h3>
+						<p>To assemble the robot, we looked at previous designs and decided the cleanest design with the parts available. We chose a laser-cut plexiglass with a breadboard glued to it, to facilitate the connections with the Arduino.</p>
+						<img src="images/Lab1/parts.jpg"/>
+						<p>Next, we attached the servo mounts and the servos themselves. We tried using the 3D-printed battery holders, but they were too large for the battery and didn’t provide the sturdiness we expected. In turn, we temporarily used a zip-tie.</p>
+						<img src="images/Lab1/servos.jpg"/>
+						<p>We assembled the wheels to the servos with no issues. However, the ball bearing was too short, so we had to use the plastic extension shown in the picture. We are going to 3D-print a new ball bearing, because the extension causes undesirable wiggling that could lead to instability and malfunctions later in the project.</p>
+						<p>We next mounted the Arduino (partially on top of the breadboard) and used 2 plastic extensions, nuts and bolts to provide the desired stability, as shown below.</p>
+						<img src="images/Lab1/final_prototype.jpg"/>							
+						<p>[Code for this step]</p>
+						<pre><code>
+#include <'Servo.h>
+int MAX_READING = 1023;
+int analog_pin = A0;
+int led_pin = 11;
+int Servo_pin = 5;
+Servo MyServo;
+
+void start_now() {
+  Serial.begin(9600);
+  pinMode(analog_pin, INPUT);
+  pinMode(led_pin, OUTPUT);
+  MyServo.attach(Servo_pin);
+}
+void setup() {
+  start_now();
+}
+void loop() {
+  int value_analogRead = analogRead(analog_pin);
+  Serial.print(value_analogRead*5.0/MAX_READING);
+  Serial.println(" Volts");
+  output_to_led(value_analogRead);
+  move_motor(MyServo, value_analogRead);
+}
+void output_to_led(int value) {
+  int new_value=map(value,0,MAX_READING,0,255);
+  analogWrite(led_pin,new_value);
+}
+void move_motor(Servo motor, int value){
+  int new_value=map(value,0,MAX_READING,0,255);
+  motor.write(new_value);
+}
+						</code></pre>
+					</div>
+				</div>
+			</section>
+
+		<!-- Footer -->
+			<footer id="footer">
+				<div class="inner">
+					<div class="content">
+						<section>
+							<h4>Relevant Links</h4>
+							<ul class="plain">
+								<li><a href="https://github.com/Albrt37/BHC_website"><i class="icon fa-github">&nbsp;</i>Our Github Repository</a></li>
+							</ul>
+						</section>
+					</div>
+					<div class="copyright">
+						&copy; Black_Hat_Cats. Our shirt size is Medium ;)
+					</div>
+				</div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
