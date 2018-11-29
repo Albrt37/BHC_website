@@ -80,46 +80,7 @@
 						<h4>Time for Arduino to shine</h4>
 						<p>We used an analog pin on the Arduino to read the output signal after the amplification stage, so that we can use the data to trigger when our robot detects an IR hat. The code was implemented as follows:</p>
 						<pre><code>
-void setup()
-{
-  sampling_period_us = round(1000000*(1.0/samplingFrequency));
-  Serial.begin(115200);
-  Serial.println("Ready");
-  sbi(ADCSRA,ADPS2) ;
- cbi(ADCSRA,ADPS1) ;
- cbi(ADCSRA,ADPS0) ;
-}
-
-void loop()
-{
-  /*SAMPLING*/
-  for(int i=0; i < samples; i++)
-  {
-      microseconds = micros();    //Overflows after around 70 minutes!
-
-      vReal[i] = analogRead(CHANNEL);
-      vImag[i] = 0;
-      while(micros() < (microseconds + sampling_period_us)){
-        //empty loop
-      }
-  }
-  /* Print the results of the sampling according to time */
- 
-  FFT.Windowing(vReal, samples, FFT_WIN_TYP_HAMMING, FFT_FORWARD);	/* Weigh data */
-  
-  FFT.Compute(vReal, vImag, samples, FFT_FORWARD); /* Compute FFT */
-  
-  FFT.ComplexToMagnitude(vReal, vImag, samples); /* Compute magnitudes */
-  
-  double x = FFT.MajorPeak(vReal, samples, samplingFrequency);
-  Serial.println(x, 6); //Print out what frequency is the most dominant.
-
-  int mag = vReal[(int)(x * samples / samplingFrequency)]; //find the magnitude of dominant frequency
-
-  Serial.println(mag);
-  delay(200); /* Repeat after delay */
-}
-
+(...)
 void PrintVector(double *vData, uint16_t bufferSize, uint8_t scaleType)
 {
   for (uint16_t i = 0; i < bufferSize; i++)
@@ -147,6 +108,7 @@ void PrintVector(double *vData, uint16_t bufferSize, uint8_t scaleType)
   Serial.println();
 }
 						</code></pre>
+						<p><a href="code_repo.html#lab2">Click here</a> to see full code for this part</p>
 						<hr />
 
 						<h3>660Hz whistle blow detection</h3>
@@ -160,32 +122,7 @@ void setup()
   Serial.println("Hello 2300");
 }
 
-void loop()
-{
-  sample();
-  compute();
-  if (mag > 1000&&f>670&&f< 690) { //soft filter
-    Serial.print("Freq: ");
-    Serial.println(f, 6);
-    Serial.print("Mag: ");
-    Serial.println(mag);
-  }
-  else { 
-    Serial.println("none");
-  }
-  delay(20);
-}
-
-void sample(){
-  for (int i = 0; i < samples; i++)
-  {
-    microseconds = micros();
-    vReal[i] = analogRead(A0);
-    vImag[i] = 0;
-    while (micros() < (microseconds + sampling_period_us)) {
-    }
-  } 
-}
+(...)
 
 void compute(){
   FFT.Windowing(vReal, samples, FFT_WIN_TYP_HAMMING, FFT_FORWARD);  /* Weigh data */
@@ -195,6 +132,8 @@ void compute(){
   mag = vReal[(int)(f * samples / samplingFrequency)]; //find the magnitude of dominant frequency
 }	
 						</code></pre>
+						<p><a href="code_repo.html#lab2">Click here</a> to see full code for this part</p>
+						
 						<p>The following video shows the detection of the 660Hz signal:</p>
 						<iframe src="https://www.youtube.com/embed/Ig_-GFhcsrQ" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 						<hr />

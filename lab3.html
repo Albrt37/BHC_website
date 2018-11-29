@@ -97,21 +97,6 @@ void setup() {
   radio.setChannel(0x50);
   radio.setPALevel(RF24_PA_MIN);
   radio.setDataRate(RF24_250KBPS);
-
-  if ( role == role_ping_out )
-  {
-    radio.openWritingPipe(pipes[0]);
-    radio.openReadingPipe(1,pipes[1]);
-  }
-  else
-  {
-    radio.openWritingPipe(pipes[1]);
-    radio.openReadingPipe(1,pipes[0]);
-  }
-
-  radio.startListening();
-  radio.printDetails(); 
-}
 (...)
 						</code></pre>
 						<p><a href="code_repo.html#lab3">Click here</a> to see full code for this part</p>
@@ -122,22 +107,6 @@ void setup() {
 						<iframe src="https://www.youtube.com/embed/pBk9capgcr4" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 						<p>Additions to previous code</p>
 						<pre><code>
-role_e role = robot;
-
-byte orientation = 1; // right = 1, up = 2, left = 4, down = 8
-byte right = 1;
-byte up = 2;
-byte left = 4;
-byte down = 8;
-
-byte posX = -1; //to take into account that we will detect corner right when we start
-byte posY = rows - 1;
-
-arduinoFFT FFT = arduinoFFT();
-#define CHANNEL A0
-const uint16_t samples = 128; //This value MUST ALWAYS be a power of 2
-const double samplingFrequency = 20000; //Hz, must be less than 10000 due to ADC
-
 unsigned int sampling_period_us;
 unsigned long microseconds;
 
