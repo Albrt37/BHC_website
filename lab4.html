@@ -6,17 +6,18 @@
 -->
 <html>
 	<head>
-		<title>Labs</title>
+		<title>Lab 3</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		<meta name="description" content="" />
 		<meta name="keywords" content="" />
-		<link rel="stylesheet" href="../assets/css/main.css" />
+		<link rel="stylesheet" href="assets/css/main.css" />
 	</head>
 	<body class="is-preload">
 
 		<!-- Header -->
 			<header id="header">
+				<a class="logo" href="index.html"></a>
 				<nav>
 					<a href="#menu">Menu</a>
 				</nav>
@@ -30,27 +31,166 @@
 					<li><a href="milestones.html">Milestones</a></li>
 					<li><a href="logistics.html">Team Logistics</a></li>
 					<li><a href="code_repo.html">Code Repo</a></li>
-
 				</ul>
 			</nav>
 
 		<!-- Heading -->
 			<div id="heading" >
-				<h1>Labs</h1>
+				<h1>Lab 4: FPGA and Shape Detection</h1>
 			</div>
 
 		<!-- Main -->
 			<section id="main" class="wrapper">
 				<div class="inner">
 					<div class="content">
-						<header>
-							<h3>Lab 1</h3>
-						</header>
-						<p>In this lab we learned the basics of Arduino, and assembled a basic body for our robot. We also programmed the robot to move in a square. <a href="labs/lab1.html">See more...</a></p>
+						<h3>Goals</h3>
+							<ul>
+								<li>Use the OV7670 digital camera and an FPGA to detect and distinguish colored shapes.</li>
+							</ul>
 						<hr />
-						<h3>Magna odio tempus commodo</h3>
-						<p>In arcu accumsan arcu adipiscing accumsan orci ac. Felis id enim aliquet. Accumsan ac integer lobortis commodo ornare aliquet accumsan erat tempus amet porttitor. Ante commodo blandit adipiscing integer semper orci eget. Faucibus commodo adipiscing mi eu nullam accumsan morbi arcu ornare odio mi adipiscing nascetur lacus ac interdum morbi accumsan vis mi accumsan ac praesent.</p>
-						<p>Felis sagittis eget tempus primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Magna sed etiam ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus lorem ipsum dolor sit amet nullam.</p>
+
+						<h3>Arduino Camera Communication:</h3>
+						<p>Ian needs to finish this!!!</p>
+						<hr />
+
+						<h3>Arduino FPGA Communication:</h3>
+						<p>In order to communicate the existence, shape, and color of a particular color in the maze we implemented an R2R ladder with R= 500 ohms to act as a simple digital to analog converter. We then fed this analog signal to an analog input pin. This was in order to minimize the number of pins required on the Arduino side. We used the MSB to represent color, and used the two less significant bits to represent shape.  We defined 000 as representing “no shape”.</p>
+						<hr />
+
+						<h3>Setting up the FPGA</h3>
+						<h4>PLL and setup</h4>
+						<p>We started by setting up the Phase-locked loop (PLL) with clocks of frequencies 24, 25 and 50Mhz, to avoid undesirable effects of clock skew. This was done using the ALTPLL function inside Quartus’ IP Catalog Library. The 24Mhz clock was used to drive the camera’s MCLK, the 25MHz clock drove the VGA module and to read from the M9K module, and the 50MHz clock was used as writing rate to the M9K module. We were supposed to use the 25MHz clock to drive the image processor, but we ended up not using that module as you will see below.</p>
+						<pre><code>
+sweetPLL	sweetPLL_inst (
+	.inclk0 ( CLOCK_50 ),
+	.c0 ( PLL_24 ),
+	.c1 ( PLL_25 ),
+	.c2 ( PLL_50 )
+	);
+						</code></pre>
+						<p>We chose different values for reading and writing from/to the M9K module because, as the lab description indicates, we can’t read and write from the same memory address at the same time. We chose to write faster than we read because that way we could avoid reading garbage, or empty addresses.</p>
+						<p>We also chose to keep the pre-established 176x144 resolution, taking into consideration the energy, time and memory costs of computing larger frames.</p>
+						<p><b>Warning!</b> If you’re using Quartus in your personal computer, make sure you have installed the Cyclone IV support files. Our computer only had the Cyclone V family installed and didn’t have the ALTPLL function. Also, the USB blaster will constantly uninstall (at least in Windows), but you can manually reinstall the drivers by opening the Control Panel --> Devices and Printers --> USB Blaster, and manually search the drivers in the folder where Quartus is installed.</p>
+
+						<h4>Showing the Russian flag</h4>
+						<p>Having finished the setup, it was time to test our buffer reader, to make sure that the information exchange between the M9K and the VGA modules was seamless. We decided to attempt printing the Russian flag. We did so by dividing the 176x144 window into 3 equal stacked rectangles colored white, blue and red from top to bottom. We used the following Verilog code:</p>
+						<pre><code>
+always @ (posedge CLOCK_50) begin
+		if(WRITE_ADDRESS <= 14'd8448) begin
+				pixel_data_RGB332 <= WHITE;
+		end
+		else if(WRITE_ADDRESS > 14'd8448 && WRITE_ADDRESS <= 14'd16896) begin
+				pixel_data_RGB332 <= BLUE;
+		end
+		else begin
+				pixel_data_RGB332 <= RED;
+		end
+end
+						</code></pre>
+						<p>Here’s the result:</p>
+						[insert pic or vid of russian flag]
+
+						<h4>Downsampling</h4>
+						<p><b>Warning!</b> This one was a pain and took the longest time, so beware.</p>
+						<p>After we verified the buffer reader was working correctly, we started building the downsampler. We need to downsample because the camera outputs pixel color information in several formats, but we are using RGB332 because our RAM can only store 8 bits per pixel. We decided to configure the camera to relay pixel color information in the format RGB565, which sends 16 bits of information over 2 clock cycles (8 bits each). The manual says it sends 5 bits of red and 3 bits of green during the first cycle, and the other 3 bits of green along with the 5 bits of blue during the second.</p>
+						<p>Considering this configuration we decided we should take the most significant bits of each color to create our RGB332 pixel color byte. We put together code to capture the 3 most significant bits out of the 5 representing red color and the 3 bits of green available on the first cycle, and only take the 2 most significant bits of blue out of the second cycle. To ensure we were reading the values only when data was valid, we used PCLK (pixel clock), and tracked when we moved from one pixel to the next, when we advance a row, and when we moved to a new frame. However, when we tried the color bar test our colors were off.</p>
+
+						<img src="images/Lab4/bad_colorbars.jpg">
+
+						<p>We started researching, and collaborating with other teams that were having similar issues. <a href="https://soapbar.github.io/team8s/">Team 8</a> helped us realize that for some obscure reason, the camera was sending the green/blue bits on the first cycle, and the red/green on the second. We proceeded to invert the sampling order, and got much better results, which can be seen below. The downsampling code can be found in the color detection section below, since we did our image processing within that same code section.</p>
+
+						<img src="images/Lab4/good_colorbars.jpg">
+
+						<p><b>Warning!</b> Note that the pin out of GPIO1 in the DE0-Nano board is rotated 180º in comparison to the pin out shown in the user manual. The ground pins are actually on the set of pins that’s closest to the edge of the board.</p>
+
+						<h4>Color Detection</h4>
+						<p>We decided to not use the image processor module given, and instead process pixel color information in the downsampler, as soon as it is received from the camera. Our approach consisted of blue and red pixel color counters that incremented whenever a pixel was dominantly blue or red. When we reached a full frame, namely when VSYNC is 1, we checked if there was a predominant color in the frame by comparing the blue and red pixel counters. We also made sure the counters surpassed a threshold, which means they also covered a significant portion of the frame, to minimize false detections in noisy images.</p>
+						<p>We created a 3-bits register to relay information about shape and color to the Arduino, cleverly named shape_n_color. We decided to make it 3 bits because the day of the competition we will be detecting 3 shapes: triangles, squares and diamonds, and 2 colors each, which makes 6 different combinations. We must also be able to relay when we detect nothing, so there are 7 possibilities in total. 3 bits allow us to distinguish up to 8 possibilities.</p>
+
+						<pre><code>
+// I/O for img processor
+assign GPIO_0_D[28] = shape_n_color[2];
+assign GPIO_0_D[30] = shape_n_color[1];
+assign GPIO_0_D[32] = shape_n_color[0];
+						</code></pre>
+
+						<p>For this lab we were only interested in detecting the color, so we assigned arbitrary shapes. More details about this are provided in the Arduino FPGA Communication section above. Find below the code for the downsampler including color detection functionality:</p>
+
+						<pre><code>
+always @ (posedge PCLK) begin
+
+	if(VSYNC && !VSYNCprev) begin
+		Y_ADDR <= 0;
+		X_ADDR <= 0;
+		flag <= 0;
+		W_EN <= 0;
+		pixel_data_RGB332[7:0] <= 0;
+		
+		// Image processor
+		if ((blue_px > red_px) && (blue_px > px_threshold)) begin
+			background <= BLUE;
+			shape_n_color <= 3'b101;
+		end
+		else if ((blue_px < red_px) && (red_px > px_threshold)) begin
+			background <= RED;
+			shape_n_color <= 3'b001;
+		end
+		else begin
+			background <= GREEN; // detects nothing
+			shape_n_color <= 3'b000;
+		end
+		red_px <= 0; // resets red pixel counter when it is at a new frame
+		blue_px <= 0; // resets blue pixel counter when it is at a new frame
+		
+	end
+	
+	else if (!HREF && HREFprev) begin
+		X_ADDR <= 0;
+		Y_ADDR <= Y_ADDR + 1;
+		flag <= 0;
+		W_EN <= 0;
+		pixel_data_RGB332[7:0] <= 0;
+	end
+	else begin
+		Y_ADDR = Y_ADDR;			
+		if (!flag && HREF) begin
+			flag = 1'b1;
+			W_EN = 0;
+			X_ADDR = X_ADDR;
+			pixel_data_RGB332[1:0] = {GPIO_1_D[12], GPIO_1_D[11]}; 
+		end
+		else if (flag && HREF) begin
+			pixel_data_RGB332[7:5] = {GPIO_1_D[15], GPIO_1_D[14], GPIO_1_D[13]};
+			pixel_data_RGB332[4:2] = {GPIO_1_D[10], GPIO_1_D[9], GPIO_1_D[8]};
+			flag = 1'b0;
+			W_EN = 1;
+			X_ADDR = X_ADDR + 1'b1;	
+			
+			// Pixel color counters
+			if ((pixel_data_RGB332[1:0] >= b_blue_threshold) && (pixel_data_RGB332[7:5] < b_red_threshold) && (pixel_data_RGB332[4:2] < b_green_threshold)) begin
+				blue_px <= blue_px + 1;
+			end
+			else if ((pixel_data_RGB332[1:0] < r_blue_threshold) && (pixel_data_RGB332[7:5] >= r_red_threshold) && (pixel_data_RGB332[4:2] < r_green_threshold)) begin
+				red_px <= red_px + 1;
+			end
+			
+		end
+		else begin
+			X_ADDR = 0;
+		end
+	end
+	VSYNCprev = VSYNC;
+	HREFprev = HREF;	
+end
+						</code></pre>
+
+						<p>We integrated this with the code written in Arduino to display color detection successfully, as seen in the video below. Please note that we also modified the code to show the background color outside of the 176x144 window to be green when there is no red or blue predominance, and turn red or blue if either is predominant in the frame.</p>
+
+						<iframe src="https://www.youtube.com/embed/DwrKI-9VoqM" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+						<ul class="actions">
+							<li><a href="#" class="button primary">Back to top</a></li>
+						</ul>
 					</div>
 				</div>
 			</section>
@@ -60,30 +200,14 @@
 				<div class="inner">
 					<div class="content">
 						<section>
-							<h3>Accumsan montes viverra</h3>
-							<p>Nunc lacinia ante nunc ac lobortis. Interdum adipiscing gravida odio porttitor sem non mi integer non faucibus ornare mi ut ante amet placerat aliquet. Volutpat eu sed ante lacinia sapien lorem accumsan varius montes viverra nibh in adipiscing. Lorem ipsum dolor vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing sed feugiat eu faucibus. Integer ac sed amet praesent. Nunc lacinia ante nunc ac gravida.</p>
-						</section>
-						<section>
-							<h4>Sem turpis amet semper</h4>
-							<ul class="alt">
-								<li><a href="#">Dolor pulvinar sed etiam.</a></li>
-								<li><a href="#">Etiam vel lorem sed amet.</a></li>
-								<li><a href="#">Felis enim feugiat viverra.</a></li>
-								<li><a href="#">Dolor pulvinar magna etiam.</a></li>
-							</ul>
-						</section>
-						<section>
-							<h4>Magna sed ipsum</h4>
+							<h4>Relevant Links</h4>
 							<ul class="plain">
-								<li><a href="#"><i class="icon fa-twitter">&nbsp;</i>Twitter</a></li>
-								<li><a href="#"><i class="icon fa-facebook">&nbsp;</i>Facebook</a></li>
-								<li><a href="#"><i class="icon fa-instagram">&nbsp;</i>Instagram</a></li>
-								<li><a href="#"><i class="icon fa-github">&nbsp;</i>Github</a></li>
+								<li><a href="https://github.com/Albrt37/BHC_website"><i class="icon fa-github">&nbsp;</i>Our Github Repository</a></li>
 							</ul>
 						</section>
 					</div>
 					<div class="copyright">
-						&copy; Untitled. Photos <a href="https://unsplash.co">Unsplash</a>, Video <a href="https://coverr.co">Coverr</a>.
+						&copy; Black_Hat_Cats. Our shirt size is Medium ;)
 					</div>
 				</div>
 			</footer>

@@ -130,7 +130,7 @@ void loop() {
 						<iframe src="https://www.youtube.com/embed/FzOQpxXkZDM" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 						<p>[Code for this step]</p>
 						<pre><code>
-#include <'Servo.h>
+#include < Servo.h >
 int MAX_READING = 1023;
 int analog_pin = A0;
 int led_pin = 11;
@@ -162,7 +162,7 @@ void output_to_led(int value) {
 						<iframe src="https://www.youtube.com/embed/gK3PRNAZcIo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 						<p>[Code for this step]</p>
 						<pre><code>
-#include <'Servo.h>
+#include < Servo.h >
 int MAX_READING = 1023;
 int analog_pin = A0;
 int led_pin = 11;
@@ -204,6 +204,157 @@ void move_motor(Servo motor, int value){
 						<p>We assembled the wheels to the servos with no issues. However, the ball bearing was too short, so we had to use the plastic extension shown in the picture. We are going to 3D-print a new ball bearing, because the extension causes undesirable wiggling that could lead to instability and malfunctions later in the project.</p>
 						<p>We next mounted the Arduino (partially on top of the breadboard) and used 2 plastic extensions, nuts and bolts to provide the desired stability, as shown below.</p>
 						<img src="images/Lab1/final_prototype.jpg"/>
+						<hr />
+
+						<h3>Make the Robot Go!</h3>
+						<p>Now using what we have done to run the motors, we can use it to control two motors to move in a square.</p> 
+						<p><b>Reminder</b>Understand how to make servos move forward and backward in different velocity.</p>
+						<iframe src="https://www.youtube.com/embed/J6l1jtC9Hv0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>[Code for this step]</p>
+						<pre><code>
+#include < Servo.h >
+int MAX_READING = 1023;
+int analog_pin = A0;
+int led_pin = 11;
+int leftServo_pin = 5;
+int rightServo_pin = 6;
+Servo leftServo;
+Servo rightServo;
+
+void start_now() {
+  Serial.begin(9600);
+  pinMode(analog_pin, INPUT);
+  pinMode(led_pin, OUTPUT);
+  leftServo.attach(leftServo_pin);
+  rightServo.attach(rightServo_pin); //check pin
+}
+void setup() {
+  start_now();
+}
+void loop() {
+  int motor_value = 180;
+  move_motor(leftServo, 180);
+  move_motor(rightServo, 180);
+  delay(635);
+  move_forward();
+  delay(1000);
+}
+void output_to_led(int value) {
+  int new_value=map(value,0,MAX_READING,0,255); //scale to PWM range
+  analogWrite(led_pin,new_value);
+}
+void move_motor(Servo motor, int value){
+  motor.write(value);
+}
+void move_forward(){
+  move_motor(leftServo, 0);
+  move_motor(rightServo,180);
+}
+						</code></pre>
+						<hr />
+
+						<h3>Extra step</h3>
+						<p><b>If you want to make more things in lab. The following would be a great reference.</b></p> 
+						<p>The modification I added since we had extra time was a basic microphone circuit. This was done before realizing this is very similar to the next lab. Regardless, I guess we are ahead of the game.</p>
+						<img src="images/Lab1/shematic.PNG"/>
+						<p>The way the circuit works is as follows. The signal starts at the microphone. One leg of the microphone is pulled up to 5 volts through a resistor, the other is set to ground. When sound hits the microphone the microphone alternates the voltage on its pulled up leg as a direct representation of the sound. I then isolate the AC component  by passing it through a capacitor. This signal then goes to the noninverting side of an LM358 op amp. In this case we use a 25k resistor and a 50 ohm resistor to amplify by a factor of 501.</p>
+						<p>If we left it like this we would have a detectable signal. Unfortunately this signal would vary between about +-2.5 volts, so we add a DC offset through two 1k resistors to the noninverting input of the op amp. I also added a capacitor in line with the 50 ohms resistor to make it so the dc offset is not amplified. I then fed this signal to the analog input of the Arduino Uno. This signal is sampled at a rate of 9.5kHz until 128 samples are collected. The way I have it currently setup it can easily detect a signal anywhere between 100hz and 4.25khz. I had to “detach” the servos while sampling or else the PWM interrupts would interfere with sampling.</p>
+						<iframe src="https://www.youtube.com/embed/ufud2p73alA" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>From there frequency of the whistle is used to control whether the robot is moving straight, turning, or stopped, depending on how high the frequency is.</p>
+						<p>[Code for this step]</p>
+						<pre><code>
+#include "arduinoFFT.h"
+arduinoFFT FFT = arduinoFFT();
+#include < Servo.h >
+Servo leftServo;
+Servo rightServo;
+#define CHANNEL A0
+const uint16_t samples = 128;
+const double samplingFrequency = 9000; //sample rate
+
+unsigned int sampling_period_us;
+unsigned long microseconds;
+double vReal[samples];
+double vImag[samples];
+
+#define SCL_INDEX 0x00
+#define SCL_TIME 0x01
+#define SCL_FREQUENCY 0x02
+#define SCL_PLOT 0x03
+
+void setup()
+{
+  int leftServo_pin = 5;
+  int rightServo_pin = 6;
+  sampling_period_us = round(1000000 * (1.0 / samplingFrequency));
+  Serial.begin(115200);
+}
+
+void loop()
+{
+  leftServo.detach(); //Detach the servos so that the PPM interrupt doesnt interfere with sampling
+  rightServo.detach();
+  delay(30);
+  for (int i = 0; i < samples; i++)
+  {
+    microseconds = micros();
+    vReal[i] = analogRead(A0);
+    vImag[i] = 0;
+    while (micros() < (microseconds + sampling_period_us)) {
+    }
+  }
+  leftServo.attach(9); //reattach the servos
+  rightServo.attach(10);
+  FFT.Windowing(vReal, samples, FFT_WIN_TYP_HAMMING, FFT_FORWARD);  //Weigh data
+  FFT.Compute(vReal, vImag, samples, FFT_FORWARD); //Compute FFT 
+  FFT.ComplexToMagnitude(vReal, vImag, samples); //Compute magnitudes 
+  delay(10);
+  double f = FFT.MajorPeak(vReal, samples, samplingFrequency); //find the dominant frequency
+  int mag = vReal[(int)(f * samples / samplingFrequency)]; //find the magnitude of dominant frequency
+  if (mag > 300) { // filter out lower volume frequencies. That way someone talking won't make it turn right 
+    if (f < 1300) {
+      turn_right();   // if whistle frequecny is lower than 1300 hz, turn right
+    }
+    else if (f > 1900) { //if whistle frequency is higher than 1900 hz, turn left
+      turn_left();
+    }
+    else {   // if whistle frequency is somehwere in between, go straight
+      go_forward();
+    }
+  }
+  else { //if there is no whistle, stop
+    stop_now();
+  }
+  delay(20);
+}
+
+void move_motor(Servo motor, int value) {
+  motor.write(value);
+}
+void go_forward() {
+  move_motor(leftServo, 0);
+  move_motor(rightServo, 180);
+}
+
+
+void turn_right() {
+  move_motor(leftServo, 180);
+  move_motor(rightServo, 180);
+}
+
+void turn_left() {
+  move_motor(leftServo, 0);
+  move_motor(rightServo, 0);
+}
+
+void stop_now() {
+  move_motor(leftServo, 95);
+  move_motor(rightServo, 90);
+}
+						</code></pre>
+						<ul class="actions">
+							<li><a href="#" class="button primary">Back to top</a></li>
+						</ul>
 					</div>
 				</div>
 			</section>

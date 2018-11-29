@@ -6,17 +6,18 @@
 -->
 <html>
 	<head>
-		<title>Labs</title>
+		<title>Lab 3</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		<meta name="description" content="" />
 		<meta name="keywords" content="" />
-		<link rel="stylesheet" href="../assets/css/main.css" />
+		<link rel="stylesheet" href="assets/css/main.css" />
 	</head>
 	<body class="is-preload">
 
 		<!-- Header -->
 			<header id="header">
+				<a class="logo" href="index.html"></a>
 				<nav>
 					<a href="#menu">Menu</a>
 				</nav>
@@ -30,27 +31,138 @@
 					<li><a href="milestones.html">Milestones</a></li>
 					<li><a href="logistics.html">Team Logistics</a></li>
 					<li><a href="code_repo.html">Code Repo</a></li>
-
 				</ul>
 			</nav>
 
 		<!-- Heading -->
 			<div id="heading" >
-				<h1>Labs</h1>
+				<h1>Lab 3: System Integration and Radio Communication</h1>
 			</div>
 
 		<!-- Main -->
 			<section id="main" class="wrapper">
 				<div class="inner">
 					<div class="content">
-						<header>
-							<h3>Lab 1</h3>
-						</header>
-						<p>In this lab we learned the basics of Arduino, and assembled a basic body for our robot. We also programmed the robot to move in a square. <a href="labs/lab1.html">See more...</a></p>
+						<h3>Goals</h3>
+							<ul>
+								<li>Make a robot that can start on a 660Hz tone.</li>
+								<li>Navigate a small test maze autonomously.</li>
+								<li>Send the maze information it discovers wirelessly to a base station.</li>
+								<li>Display maze information on a screen for debugging.</li>
+							</ul>
 						<hr />
-						<h3>Magna odio tempus commodo</h3>
-						<p>In arcu accumsan arcu adipiscing accumsan orci ac. Felis id enim aliquet. Accumsan ac integer lobortis commodo ornare aliquet accumsan erat tempus amet porttitor. Ante commodo blandit adipiscing integer semper orci eget. Faucibus commodo adipiscing mi eu nullam accumsan morbi arcu ornare odio mi adipiscing nascetur lacus ac interdum morbi accumsan vis mi accumsan ac praesent.</p>
-						<p>Felis sagittis eget tempus primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Magna sed etiam ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus lorem ipsum dolor sit amet nullam.</p>
+
+						<h3>Overview</h3>
+						<p>This lab integrates systems that we had thoroughly developed and explained in previous labs and milestones. Below, we document the new content for this lab, RF communication between Arduinos using the transceivers provided, and the underlying software. Refer to our <a href="index.html">main page</a> to find information about subjects like line following, collision avoidance, wall following, and 660 Hz audio signal detection.</p>
+						<hr />
+
+						<h3>Data structure</h3>
+						<p>Because the Arduino has a very limited memory (~2KB), we decided to store all the grid's information in a 2D byte array, where the first and second indices represent the column and row respectively, and the value determines the walls we have observed. We use the following convention, for a block in the grid array, the least significant bit represents if the eastern wall is there, the 2nd bit represents the northern wall, 3rd bit western wall, and 4th bit western wall. We have 4 bits unused, that we might utilize later on for treasure information. Also orientation can be 1 if we are facing east, 2 if we are facing north, 4 if we are facing west, and 8 if we are facing south. And this is done so we can easily multiply the boolean output of the front and right sensors by the orientation and embed it in the grid information byte (of course, shifting (or taking the remainder) is needed when the multipication output is greater than 15) so we can have only one line to compute the new block information.</p>
+						<pre><code>
+grid[row][col] |= frontSensor * orientation | rightSensor * orientation * 8 | frontSensor * orientation >> 16 | rightSensor * orientation * 8 >> 16;
+						</code></pre>
+						<p>To transmit the data, we embed the column, row, and information byte (each of these is one byte) into a long (again, one byte of the long remains unused) and transmit it to the radio. We do the embedding by adding (or using bitwise-OR) and then shift it by the desired amount to fit everything.</p>
+						<p>Although as of now, our navigation algorithm (right wall following) doesn't require the robots to have a copy of the grid, we keep it stored on board just in case we decided to implement Depth First Search or another algorithm for navigation.</p>
+						<hr />
+
+						<h3>RF communication and maze mapping simulation</h3>
+						<p>For this lab, we were provided 2 Nordic nRF24L01+ transceivers (with breakout boards for easier mounting on the Arduinos), and 1 extra Arduino Uno. WATCH OUT for these RF modules!!! They broke very often and very easily. We didn’t have any issues with it, but several teams did.</p>
+						<p>These radios were connected to digital pins 9 to 13, and powered with 3.3V. We had to download the <a href="https://github.com/maniacbug/RF24">RF24 Arduino Library</a> and were given a <a href="https://github.com/CEI-lab/ece3400-2018/blob/master/docs/Solutions/lab4/GettingStarted/GettingStarted.ino">basic sketch</a> as a guide to build our communication protocol.</p>
+						<p>After deciding on the data structure, as discussed in the previous section, we ran a small simulation of the maze navigation to test communication between the Arduinos. Find below a video demonstration and a picture of the command prompt showing the position and walls detected during the simulation:</p>
+						<iframe src="https://www.youtube.com/embed/JTi3uWHZhBk" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<img src="images/Lab3/RF_roger.png">
+						<hr />
+
+						<h3>Partial integration</h3>
+						<p>For this part, we started integrating the code for RF communication with the actual systems of the robot. For space concerns, we will not show the code for this part, as it is very similar to that in the next section, Final Integration. In this part, the robot traverses the maze using line following, wall detection, and transmits this information to the base station, which displays it in the GUI.</p>
+						<iframe src="https://www.youtube.com/embed/hYONH2-k_cY" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>For this part, the base station was programmed as follows:</p>
+						<pre><code>
+RF24 radio(9,10);
+const uint64_t pipes[2] = { 0x0000000026LL, 0x0000000027LL };
+typedef enum { role_ping_out = 1, role_pong_back } role_e;
+const char* role_friendly_name[] = { "invalid", "Ping out", "Pong back"};
+role_e role = role_pong_back;
+
+int rows = 2; //change grid size depending on maze
+int cols = 3;
+byte grid[3][2];
+
+void setup() {
+  Serial.begin(57600);
+  printf_begin();
+  radio.begin();
+  radio.setRetries(15,15);
+  radio.setAutoAck(true);
+  radio.setChannel(0x50);
+  radio.setPALevel(RF24_PA_MIN);
+  radio.setDataRate(RF24_250KBPS);
+
+  if ( role == role_ping_out )
+  {
+    radio.openWritingPipe(pipes[0]);
+    radio.openReadingPipe(1,pipes[1]);
+  }
+  else
+  {
+    radio.openWritingPipe(pipes[1]);
+    radio.openReadingPipe(1,pipes[0]);
+  }
+
+  radio.startListening();
+  radio.printDetails(); 
+}
+(...)
+						</code></pre>
+						<p><a href="code_repo.html#lab3">Click here</a> to see full code for this part</p>
+						<hr />
+
+						<h3>Final Integration</h3>
+						<p>To conclude the lab, we connected all systems to test the overall performance of the robot. Keep in mind we are using whistle detection (660Hz sound), maze navigation (line/wall following), robot detection (6.08kHz IR signal), decoy avoidance (18kHz IR signal), and data transmission with a base station that displays the detected walls on the GUI given. Also notice in the background the soundtrack of Mission Impossible, which covers a wide range of frequencies, introducing noise to the environment to test the robustness of our audio filtering.</p>
+						<iframe src="https://www.youtube.com/embed/pBk9capgcr4" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>Additions to previous code</p>
+						<pre><code>
+role_e role = robot;
+
+byte orientation = 1; // right = 1, up = 2, left = 4, down = 8
+byte right = 1;
+byte up = 2;
+byte left = 4;
+byte down = 8;
+
+byte posX = -1; //to take into account that we will detect corner right when we start
+byte posY = rows - 1;
+
+arduinoFFT FFT = arduinoFFT();
+#define CHANNEL A0
+const uint16_t samples = 128; //This value MUST ALWAYS be a power of 2
+const double samplingFrequency = 20000; //Hz, must be less than 10000 due to ADC
+
+unsigned int sampling_period_us;
+unsigned long microseconds;
+
+#ifdef __AVR__
+#include < avr/power.h >
+#endif
+
+#define SCL_INDEX 0x00
+#define SCL_TIME 0x01
+#define SCL_FREQUENCY 0x02
+#define SCL_PLOT 0x03
+
+#ifndef cbi
+#define cbi(sfr, bit) (_SFR_BYTE(sfr) &= ~_BV(bit))
+#endif
+#ifndef sbi
+#define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
+#endif
+(...)
+						</code></pre>
+						<p><a href="code_repo.html#lab3">Click here</a> to see full code for this part</p>
+
+						<ul class="actions">
+							<li><a href="#" class="button primary">Back to top</a></li>
+						</ul>
 					</div>
 				</div>
 			</section>
@@ -60,30 +172,14 @@
 				<div class="inner">
 					<div class="content">
 						<section>
-							<h3>Accumsan montes viverra</h3>
-							<p>Nunc lacinia ante nunc ac lobortis. Interdum adipiscing gravida odio porttitor sem non mi integer non faucibus ornare mi ut ante amet placerat aliquet. Volutpat eu sed ante lacinia sapien lorem accumsan varius montes viverra nibh in adipiscing. Lorem ipsum dolor vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing sed feugiat eu faucibus. Integer ac sed amet praesent. Nunc lacinia ante nunc ac gravida.</p>
-						</section>
-						<section>
-							<h4>Sem turpis amet semper</h4>
-							<ul class="alt">
-								<li><a href="#">Dolor pulvinar sed etiam.</a></li>
-								<li><a href="#">Etiam vel lorem sed amet.</a></li>
-								<li><a href="#">Felis enim feugiat viverra.</a></li>
-								<li><a href="#">Dolor pulvinar magna etiam.</a></li>
-							</ul>
-						</section>
-						<section>
-							<h4>Magna sed ipsum</h4>
+							<h4>Relevant Links</h4>
 							<ul class="plain">
-								<li><a href="#"><i class="icon fa-twitter">&nbsp;</i>Twitter</a></li>
-								<li><a href="#"><i class="icon fa-facebook">&nbsp;</i>Facebook</a></li>
-								<li><a href="#"><i class="icon fa-instagram">&nbsp;</i>Instagram</a></li>
-								<li><a href="#"><i class="icon fa-github">&nbsp;</i>Github</a></li>
+								<li><a href="https://github.com/Albrt37/BHC_website"><i class="icon fa-github">&nbsp;</i>Our Github Repository</a></li>
 							</ul>
 						</section>
 					</div>
 					<div class="copyright">
-						&copy; Untitled. Photos <a href="https://unsplash.co">Unsplash</a>, Video <a href="https://coverr.co">Coverr</a>.
+						&copy; Black_Hat_Cats. Our shirt size is Medium ;)
 					</div>
 				</div>
 			</footer>

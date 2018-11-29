@@ -6,17 +6,18 @@
 -->
 <html>
 	<head>
-		<title>Labs</title>
+		<title>Lab 2</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		<meta name="description" content="" />
 		<meta name="keywords" content="" />
-		<link rel="stylesheet" href="../assets/css/main.css" />
+		<link rel="stylesheet" href="assets/css/main.css" />
 	</head>
 	<body class="is-preload">
 
 		<!-- Header -->
 			<header id="header">
+				<a class="logo" href="index.html"></a>
 				<nav>
 					<a href="#menu">Menu</a>
 				</nav>
@@ -30,27 +31,182 @@
 					<li><a href="milestones.html">Milestones</a></li>
 					<li><a href="logistics.html">Team Logistics</a></li>
 					<li><a href="code_repo.html">Code Repo</a></li>
-
 				</ul>
 			</nav>
 
 		<!-- Heading -->
 			<div id="heading" >
-				<h1>Labs</h1>
+				<h1>Lab 2: Analog circuitry and FFT</h1>
 			</div>
 
 		<!-- Main -->
 			<section id="main" class="wrapper">
 				<div class="inner">
 					<div class="content">
-						<header>
-							<h3>Lab 1</h3>
-						</header>
-						<p>In this lab we learned the basics of Arduino, and assembled a basic body for our robot. We also programmed the robot to move in a square. <a href="labs/lab1.html">See more...</a></p>
+						<h3>Goals</h3>
+							<ul>
+								<li>Design a microphone circuit that detects a 660Hz whistle blow signifying the beginning of maze mapping.</li>
+								<li>Design a circuit using an IR sensor to detect nearby robots emitting IR at 6.08kHz, and distinguish them from decoys emitting at 18kHz.</li>
+							</ul>
 						<hr />
-						<h3>Magna odio tempus commodo</h3>
-						<p>In arcu accumsan arcu adipiscing accumsan orci ac. Felis id enim aliquet. Accumsan ac integer lobortis commodo ornare aliquet accumsan erat tempus amet porttitor. Ante commodo blandit adipiscing integer semper orci eget. Faucibus commodo adipiscing mi eu nullam accumsan morbi arcu ornare odio mi adipiscing nascetur lacus ac interdum morbi accumsan vis mi accumsan ac praesent.</p>
-						<p>Felis sagittis eget tempus primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus. Integer ac pellentesque praesent tincidunt felis sagittis eget. tempus euismod. Magna sed etiam ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing accumsan eu faucibus lorem ipsum dolor sit amet nullam.</p>
+
+						<h3>FFT Library</h3>
+						<p>The FFT library basically computes the fourier transform of the input signal and returns the magnitudes of each frequency with frequencies based on the sampling rate and sample size. We decided to use another FFT library that we have more experience with, called “arduinoFFT”.</p>
+						<hr />
+
+						<h3>Robot Collision Avoidance and decoy detection</h3>
+						
+						<h4>IR sensors</h4>
+						<p>The IR circuit is shown below. The IR sensor acts like a switch: it’s open (high resistance) when no IR light is received.</p>
+						<img src="images/Lab2/lab2_phototransistor_schem.png"/>
+
+						<h4>IR Voltage with Oscilloscope</h4>
+						<p>We measured the output voltage from our IR sensor with oscilloscope and viewed the FFT. The problem is that the robots IR oscillates at 6.08kHz fundamental frequency and its harmonics 12kHz, 18kHz, etc… . This is a problem because decoys also generate 18kHz light. So it might be hard to tell if decoy is there because it could be just a robot’s 18kHz frequency, but it’s much easier to tell if a robot is there because we can only check for the 6.08kHz oscillation. Note that if we can tell if a robot is there, we can just ignore the decoys and not react to them, and only stop when facing a robot.</p>
+						<iframe src="https://www.youtube.com/embed/QAz9nfZOm0I" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+						<h4>Filtered IR signal</h4>
+						<p>We decided to implement a RC low-pass filter with corner frequency slightly larger than 6.08kHz to detect the signal from the IR hat, filter out the decoys and account for some error. Ultimately we decided to find values of for a corner frequency of 7kHz. At first, we tried designing the filter with a fixed 100nF capacitor, which yielded a value of approximately 220Ω for the series resistor we needed to achieve the 7kHz frequency. We used the formula fc=1/(2πRC). However, these values didn’t filter out the 18kHz signal, so we decided to use a larger resistor (10kΩ), with a corresponding capacitor of approximately 2.2nF, which succeeded to filter the 18kHz decoy signal, and the harmonic components of the 6.08kHz IR hat. The filter was implemented as follows:</p>
+						<img src="images/Lab2/IR sensor with filter.PNG"/>
+
+						<h4>Amplification stage</h4>
+						<p>The detection of the 6.08kHz signal and filtering of the 18kHz were successful, however the signals were noticeably different only at a short range of approximately 4 inches. Thus, we decided to design an amplification stage after the low pass filter, to detect the 6.08kHz signal at a greater distance. The amplification stage was designed as follows:</p>
+						<img src="images/Lab2/Amplified IR sensor.PNG"/>
+						<p>With this implementation, the sensing ability of the circuit increased significantly, as observed in the amplitude of the signal in the picture below:</p>
+						<img src="images/Lab2/20180926_202250.png"/>
+						<p>Since the Arduino can’t handle negative voltages, we had to make sure to include a positive voltage offset. The IR sensor added a DC offset on its own, but since we couldn’t control it, we decided to include a series capacitor to eliminate that offset, and use a voltage divider to control the voltage we wanted at the positive input of the amplifier. We introduced an offset of approximately 2.5V, hence making sure that the signal would never take values underneath 0V.</p>
+						<img src="images/Lab2/IR_sensor_range.png"/>
+						<p>Observe in the picture how the magnitude of the sensor readings of the 6.08kHz are significantly larger than the readings of the 16kHz at distances up to 9 inches. This ensures our little guy will detect other robots far enough that it will have time to avoid a collision.</p>
+
+						<h4>Time for Arduino to shine</h4>
+						<p>We used an analog pin on the Arduino to read the output signal after the amplification stage, so that we can use the data to trigger when our robot detects an IR hat. The code was implemented as follows:</p>
+						<pre><code>
+void setup()
+{
+  sampling_period_us = round(1000000*(1.0/samplingFrequency));
+  Serial.begin(115200);
+  Serial.println("Ready");
+  sbi(ADCSRA,ADPS2) ;
+ cbi(ADCSRA,ADPS1) ;
+ cbi(ADCSRA,ADPS0) ;
+}
+
+void loop()
+{
+  /*SAMPLING*/
+  for(int i=0; i < samples; i++)
+  {
+      microseconds = micros();    //Overflows after around 70 minutes!
+
+      vReal[i] = analogRead(CHANNEL);
+      vImag[i] = 0;
+      while(micros() < (microseconds + sampling_period_us)){
+        //empty loop
+      }
+  }
+  /* Print the results of the sampling according to time */
+ 
+  FFT.Windowing(vReal, samples, FFT_WIN_TYP_HAMMING, FFT_FORWARD);	/* Weigh data */
+  
+  FFT.Compute(vReal, vImag, samples, FFT_FORWARD); /* Compute FFT */
+  
+  FFT.ComplexToMagnitude(vReal, vImag, samples); /* Compute magnitudes */
+  
+  double x = FFT.MajorPeak(vReal, samples, samplingFrequency);
+  Serial.println(x, 6); //Print out what frequency is the most dominant.
+
+  int mag = vReal[(int)(x * samples / samplingFrequency)]; //find the magnitude of dominant frequency
+
+  Serial.println(mag);
+  delay(200); /* Repeat after delay */
+}
+
+void PrintVector(double *vData, uint16_t bufferSize, uint8_t scaleType)
+{
+  for (uint16_t i = 0; i < bufferSize; i++)
+  {
+    double abscissa;
+    /* Print abscissa value */
+    switch (scaleType)
+    {
+      case SCL_INDEX:
+        abscissa = (i * 1.0);
+	break;
+      case SCL_TIME:
+        abscissa = ((i * 1.0) / samplingFrequency);
+	break;
+      case SCL_FREQUENCY:
+        abscissa = ((i * 1.0 * samplingFrequency) / samples);
+	break;
+    }
+    Serial.print(abscissa, 6);
+    if(scaleType==SCL_FREQUENCY)
+      Serial.print("Hz");
+    Serial.print(" ");
+    Serial.println(vData[i], 4);
+  }
+  Serial.println();
+}
+						</code></pre>
+						<hr />
+
+						<h3>660Hz whistle blow detection</h3>
+						<p>We designed and built the circuitry for this during lab 1. However, we didn’t set it to detect the 660Hz whistle blow. The FFT code was slightly modified to reflect the new threshold, as seen below:</p>
+						
+						<pre><code>
+void setup()
+{
+  sampling_period_us = round(1000000 * (1.0 / samplingFrequency));
+  Serial.begin(115200);
+  Serial.println("Hello 2300");
+}
+
+void loop()
+{
+  sample();
+  compute();
+  if (mag > 1000&&f>670&&f< 690) { //soft filter
+    Serial.print("Freq: ");
+    Serial.println(f, 6);
+    Serial.print("Mag: ");
+    Serial.println(mag);
+  }
+  else { 
+    Serial.println("none");
+  }
+  delay(20);
+}
+
+void sample(){
+  for (int i = 0; i < samples; i++)
+  {
+    microseconds = micros();
+    vReal[i] = analogRead(A0);
+    vImag[i] = 0;
+    while (micros() < (microseconds + sampling_period_us)) {
+    }
+  } 
+}
+
+void compute(){
+  FFT.Windowing(vReal, samples, FFT_WIN_TYP_HAMMING, FFT_FORWARD);  /* Weigh data */
+  FFT.Compute(vReal, vImag, samples, FFT_FORWARD); /* Compute FFT */
+  FFT.ComplexToMagnitude(vReal, vImag, samples); /* Compute magnitudes */
+  f = FFT.MajorPeak(vReal, samples, samplingFrequency); //find the dominant frequency
+  mag = vReal[(int)(f * samples / samplingFrequency)]; //find the magnitude of dominant frequency
+}	
+						</code></pre>
+						<p>The following video shows the detection of the 660Hz signal:</p>
+						<iframe src="https://www.youtube.com/embed/Ig_-GFhcsrQ" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<hr />
+
+						<h3>New Mechanical Design!!</h3>
+						<p>In order to improve the robustness of our robot we designed and used Ian’s 3D printer to make a custom robot frame. This design holds all of our components in place where we would want them and also allows for future flexibility through its many mounting points.</p>
+						<img src="images/Lab2/new_design1.png"/>
+						<img src="images/Lab2/new_design2.png"/>
+
+						<ul class="actions">
+							<li><a href="#" class="button primary">Back to top</a></li>
+						</ul>
 					</div>
 				</div>
 			</section>
@@ -60,30 +216,14 @@
 				<div class="inner">
 					<div class="content">
 						<section>
-							<h3>Accumsan montes viverra</h3>
-							<p>Nunc lacinia ante nunc ac lobortis. Interdum adipiscing gravida odio porttitor sem non mi integer non faucibus ornare mi ut ante amet placerat aliquet. Volutpat eu sed ante lacinia sapien lorem accumsan varius montes viverra nibh in adipiscing. Lorem ipsum dolor vestibulum ante ipsum primis in faucibus vestibulum. Blandit adipiscing eu felis iaculis volutpat ac adipiscing sed feugiat eu faucibus. Integer ac sed amet praesent. Nunc lacinia ante nunc ac gravida.</p>
-						</section>
-						<section>
-							<h4>Sem turpis amet semper</h4>
-							<ul class="alt">
-								<li><a href="#">Dolor pulvinar sed etiam.</a></li>
-								<li><a href="#">Etiam vel lorem sed amet.</a></li>
-								<li><a href="#">Felis enim feugiat viverra.</a></li>
-								<li><a href="#">Dolor pulvinar magna etiam.</a></li>
-							</ul>
-						</section>
-						<section>
-							<h4>Magna sed ipsum</h4>
+							<h4>Relevant Links</h4>
 							<ul class="plain">
-								<li><a href="#"><i class="icon fa-twitter">&nbsp;</i>Twitter</a></li>
-								<li><a href="#"><i class="icon fa-facebook">&nbsp;</i>Facebook</a></li>
-								<li><a href="#"><i class="icon fa-instagram">&nbsp;</i>Instagram</a></li>
-								<li><a href="#"><i class="icon fa-github">&nbsp;</i>Github</a></li>
+								<li><a href="https://github.com/Albrt37/BHC_website"><i class="icon fa-github">&nbsp;</i>Our Github Repository</a></li>
 							</ul>
 						</section>
 					</div>
 					<div class="copyright">
-						&copy; Untitled. Photos <a href="https://unsplash.co">Unsplash</a>, Video <a href="https://coverr.co">Coverr</a>.
+						&copy; Black_Hat_Cats. Our shirt size is Medium ;)
 					</div>
 				</div>
 			</footer>
