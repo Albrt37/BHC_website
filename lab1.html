@@ -203,41 +203,7 @@ void move_motor(Servo motor, int value){
 						<img src="images/Lab1/servos.jpg"/>
 						<p>We assembled the wheels to the servos with no issues. However, the ball bearing was too short, so we had to use the plastic extension shown in the picture. We are going to 3D-print a new ball bearing, because the extension causes undesirable wiggling that could lead to instability and malfunctions later in the project.</p>
 						<p>We next mounted the Arduino (partially on top of the breadboard) and used 2 plastic extensions, nuts and bolts to provide the desired stability, as shown below.</p>
-						<img src="images/Lab1/final_prototype.jpg"/>							
-						<p>[Code for this step]</p>
-						<pre><code>
-#include <'Servo.h>
-int MAX_READING = 1023;
-int analog_pin = A0;
-int led_pin = 11;
-int Servo_pin = 5;
-Servo MyServo;
-
-void start_now() {
-  Serial.begin(9600);
-  pinMode(analog_pin, INPUT);
-  pinMode(led_pin, OUTPUT);
-  MyServo.attach(Servo_pin);
-}
-void setup() {
-  start_now();
-}
-void loop() {
-  int value_analogRead = analogRead(analog_pin);
-  Serial.print(value_analogRead*5.0/MAX_READING);
-  Serial.println(" Volts");
-  output_to_led(value_analogRead);
-  move_motor(MyServo, value_analogRead);
-}
-void output_to_led(int value) {
-  int new_value=map(value,0,MAX_READING,0,255);
-  analogWrite(led_pin,new_value);
-}
-void move_motor(Servo motor, int value){
-  int new_value=map(value,0,MAX_READING,0,255);
-  motor.write(new_value);
-}
-						</code></pre>
+						<img src="images/Lab1/final_prototype.jpg"/>
 					</div>
 				</div>
 			</section>
