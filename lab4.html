@@ -50,11 +50,15 @@
 						<hr />
 
 						<h3>Arduino Camera Communication:</h3>
-						<p>Ian needs to finish this!!!</p>
+						<p>Every time the camera books it must have the correct registers written to it through its SCCB bus. We mimic this bus using the arduino I2C bus and Wire library, alongside the lab provided code. We begin by resetting the bus through a write of 0x80 to register 0x12. After waiting for this to finish we proceed to write the registers with the values listed above, as well as setting the color matrix. Finally, we read each written register and check it against the expected value.</p>
+						<img src="images/lab4/registers.png">
 						<hr />
 
 						<h3>Arduino FPGA Communication:</h3>
 						<p>In order to communicate the existence, shape, and color of a particular color in the maze we implemented an R2R ladder with R= 500 ohms to act as a simple digital to analog converter. We then fed this analog signal to an analog input pin. This was in order to minimize the number of pins required on the Arduino side. We used the MSB to represent color, and used the two less significant bits to represent shape.  We defined 000 as representing “no shape”.</p>
+						<img src="images/lab4/circuit.png">
+
+						<p><a href="code_repo.html#lab4">Click here</a> to see full code for this part</p>
 						<hr />
 
 						<h3>Setting up the FPGA</h3>
@@ -76,10 +80,10 @@ sweetPLL	sweetPLL_inst (
 						<p>Having finished the setup, it was time to test our buffer reader, to make sure that the information exchange between the M9K and the VGA modules was seamless. We decided to attempt printing the Russian flag. We did so by dividing the 176x144 window into 3 equal stacked rectangles colored white, blue and red from top to bottom. We used the following Verilog code:</p>
 						<pre><code>
 always @ (posedge CLOCK_50) begin
-		if(WRITE_ADDRESS <= 14'd8448) begin
+		if(WRITE_ADDRESS <= 15'd8448) begin
 				pixel_data_RGB332 <= WHITE;
 		end
-		else if(WRITE_ADDRESS > 14'd8448 && WRITE_ADDRESS <= 14'd16896) begin
+		else if(WRITE_ADDRESS > 15'd8448 && WRITE_ADDRESS <= 15'd16896) begin
 				pixel_data_RGB332 <= BLUE;
 		end
 		else begin
@@ -183,6 +187,7 @@ always @ (posedge PCLK) begin
 	HREFprev = HREF;	
 end
 						</code></pre>
+						<p><a href="code_repo.html#lab4">Click here</a> to see full code for this part</p>
 
 						<p>We integrated this with the code written in Arduino to display color detection successfully, as seen in the video below. Please note that we also modified the code to show the background color outside of the 176x144 window to be green when there is no red or blue predominance, and turn red or blue if either is predominant in the frame.</p>
 
