@@ -51,307 +51,74 @@
 							</ul>
 						<hr />
 
-						<h3>Sub-teams</h3>
-						<p><b>Subteam 1: </b>Hadi and Alberto</p>
-						<p><b>Subteam 2: </b>Ian and Yanrui</p>
-						<hr />
-
-						<h3>Prelab</h3>
-						<p><a href="https://www.arduino.cc/en/Main/Software">Click here </a>to download the Arduino IDE. After installing it, you should be able to see something like this:</p>
-						<img src="images/Lab1/arduino_IDE.png"/>
-						<hr />
-
-						<h3>Internal LED blink</h3>
-						<p><b>Firstly</b>, open the Arduino IDE -> File -> Examples -> 1.Basics -> Blink. <b>Then</b>, click the <b>checkmark</b> to compile the code -> click the <b>right arrow</b> to upload the code to the Arduino. Following these instructions, we made the built-in LED blink, as seen in the video below. <b>Warning!!</b> Make sure your Arduino IDE is connected to right COM port. You can verify this by navigating to Tools -> Ports.</p>
-						<iframe src="https://www.youtube.com/embed/iQ6RLm8GsXc" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-						<p>[Code for this step]</p>
+						<h3>Detecting treasure presence</h3>
+						<p>This part was already implemented in <a href="lab4.html">Lab 4</a>. Our solution was to detect when neither blue nor red were predominant on the screen by setting a threshold. This threshold denotes the least amount of pixels of either color that must be present in each frame in order to declare when we've detected a treasure. Please observe in this <a href="https://www.youtube.com/watch?v=DwrKI-9VoqM">video</a> how the background color turns green and the serial monitor outputs "None" when there is no treasure detected.</p>
 						<pre><code>
-// the setup function runs once when you press reset or power the board
-void setup() {
-  // initialize digital pin LED_BUILTIN as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
-}
-
-// the loop function runs over and over again forever
-void loop() {
-  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making   the voltage LOW
-  delay(1000);                       // wait for a second
-}
+assign px_threshold = 15'd750;
+if ((blue_px > red_px) && (blue_px > px_threshold)) begin
+			if(firstX+midX2 > midX1+endX + 50) begin
+				background <= BLUE;
+				shape_n_color <= 3'b101;
+			end
+			else if( firstX+endX < midX1+midX2)begin
+				background <= BLUE;
+				shape_n_color <= 3'b111;
+			end
+			else begin
+				background <= BLUE;
+				shape_n_color <= 3'b110;
+			end
+		end
+		else if ((blue_px < red_px) && (red_px > px_threshold)) begin
+			if(firstX+midX2 > midX1+endX + 40) begin
+				background <= RED;
+				shape_n_color <= 3'b001;
+			end
+			else if(firstX+endX < midX1+midX2)begin
+				background <= RED;
+				shape_n_color <= 3'b011;
+			end
+			else begin
+				background <= RED;
+				shape_n_color <= 3'b010;
+			end
+		end
 						</code></pre>
+						<p><a href="code_repo.html#milestone4">Click here</a> to see full code for this part</p>
 						<hr />
 
-						<h3>External LED blink</h3>
-						<p>After Internal LED Blink, let us blink an External LED! Pick up an LED and a resistor. Then, connect the LED and Resistor on breadboard, use a different pin and modify to blink Internal LED. Great! The External LED blinks, see the video below. <b>Warning!!</b> Make sure your LED is connected to a resistor at least 300ohm, unless you want to blow up your Arduino.</p>
-						<iframe src="https://www.youtube.com/embed/0pE7rAklaJY" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-						<p>[Code for this step]</p>
-						<pre><code>
-// the setup function runs once when you press reset or power the    board
-int led_pin = 10; //pin connected to external LED
-void setup() {
-  // initialize digital pin LED_BUILTIN as an output.
-  pinMode(led_pin, OUTPUT);
-}
-
-// the loop function runs over and over again forever
-void loop() {
-  digitalWrite(led_pin, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
-  digitalWrite(led_pin, LOW);    // turn the LED off by making   the voltage LOW
-  delay(1000);                       // wait for a second
-}
-						</code></pre>
+						<h3>Distinguishing red and blue treasures</h3>
+						<p>Just as the previous part, this one was covered in <a href="lab4.html">Lab 4</a>. Refer again to this <a href="https://www.youtube.com/watch?v=DwrKI-9VoqM">video</a> to observe how the background turns red or blue depending on the color detected, and it is also output in the serial monitor.</p>
 						<hr />
 
-						<h3>Read the potentiometer</h3>
-						<p>After External LED Blink, Let us Read Analog value of Potentiometer! Pick up a potentiometer and a resistor. Then, connect the potentiometer and resistor on breadboard, use the Analog Pin A0 and write code to read the value. Remember to click Serial monitor to see the value (on the top right of Arduino IDE). Cool! Get the value of the potentiometer, see the video below. <b>Warning!!</b> Make sure your Potentiometer is connected to a Resistor at least 300ohm, unless you want to blow up your Arduino.</p>
-						<iframe src="https://www.youtube.com/embed/qJ6spCfECX0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-						<p>[Code for this step]</p>
-						<pre><code>
-int analog_pin = A0;
+						<h3>Distinguishing colors and shapes</h3>
+						<p>This part was the most work and the most fun. Our approach to detecting shapes was an extension of the color detection. We did it in the same code section, instead of using the given image processor module, we built it within the main code.</p>
+						<p>The color detection worked the same way. To detect shapes, we mark the position of the first color pixel at the top of the figure, the first near the middle, and the bottom. Then we compared those values, and determined the following cases: </p>
+						<ul>
+							<li>If (top>middle>bottom) the figure is a triangle.</li>
+							<li>If (top=middle=bottom) the figure is a square.</li>
+							<li>If ((top=bottom)>middle) the figure is a diamond.</li>
+						</ul>
+						<p>We expanded the 3-bit shape and color information from Lab 4 to include all 6 posibilities. See the updated Arduino code <a href="code_repo.html#milestone4">here</a>. Below you will find our shape and color detection in action.</p>
+						
+						<h4>Red Triangle</h4>
+						<iframe src="https://www.youtube.com/embed/17FWW0TxkGM" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
-void setup() {
-  // initialize serial communication at 9600 bits per second:
-  Serial.begin(9600);
-}
+						<h4>Red Square</h4>
+						<iframe src="https://www.youtube.com/embed/MWOyow0-6UA" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
-void loop() {
-  // read the input pin:
-  value_analogRead = analogRead(analog_pin);
-  Serial.println(Value_analogRead);
-  delay(10);        // delay in between reads for stability
-}
-						</code></pre>
-						<hr />
+						<h4>Red Diamond</h4>
+						<iframe src="https://www.youtube.com/embed/bF87QfG15iA" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
-						<h3>Analog Output (PWM)</h3>
-						<p>In this step, we connect the previous two steps to read the value of potentiometer and put the output to External LED. <b>Note</b> you can learn PWM <a href="https://cei-lab.github.io/ece3400-2017/tutorials/PWM/PWM.html">here</a>.</p>
-						<iframe src="https://www.youtube.com/embed/FzOQpxXkZDM" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-						<p>[Code for this step]</p>
-						<pre><code>
-#include <'Servo.h>
-int MAX_READING = 1023;
-int analog_pin = A0;
-int led_pin = 11;
+						<h4>Blue Triangle</h4>
+						<iframe src="https://www.youtube.com/embed/AO2KdooxU0E" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
-void start_now() {
-  Serial.begin(9600);
-  pinMode(analog_pin, INPUT);
-  pinMode(led_pin, OUTPUT);
-}
-void setup() {
-  start_now();
-}
-void loop() {
-  int value_analogRead = analogRead(analog_pin);
-  Serial.print(value_analogRead*5.0/MAX_READING);
-  Serial.println(" Volts");
-  output_to_led(value_analogRead);
-}
-void output_to_led(int value) {
-  int new_value=map(value,0,MAX_READING,0,255);
-  analogWrite(led_pin,new_value);
-}
-						</code></pre>
-						<hr />
+						<h4>Blue Square</h4>
+						<iframe src="https://www.youtube.com/embed/WxxfO-N1DgI" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
-						<h3>Parallax Servos</h3>
-						<p>Pick up a Parallax Servo. Remember: Red Line = Vcc, Black Line = GND, White Line = Signal. Unlike a regular servo that is usually limited to 180 degrees and control the angle, a continuous servo (like the one used for this lab) can be controlled with direction and speed.</p> 
-						<p>Click File -> Examples -> Servo -> knop to open your demo code. Then connect your previous coding with the servo. To make the servo move, connect the previous three steps. See the video below.</p>
-						<iframe src="https://www.youtube.com/embed/gK3PRNAZcIo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-						<p>[Code for this step]</p>
-						<pre><code>
-#include <'Servo.h>
-int MAX_READING = 1023;
-int analog_pin = A0;
-int led_pin = 11;
-int Servo_pin = 5;
-Servo MyServo;
+						<h4>Blue Diamond</h4>
+						<iframe src="https://www.youtube.com/embed/EAWZ8Gp7bSo" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
-void start_now() {
-  Serial.begin(9600);
-  pinMode(analog_pin, INPUT);
-  pinMode(led_pin, OUTPUT);
-  MyServo.attach(Servo_pin);
-}
-void setup() {
-  start_now();
-}
-void loop() {
-  int value_analogRead = analogRead(analog_pin);
-  Serial.print(value_analogRead*5.0/MAX_READING);
-  Serial.println(" Volts");
-  output_to_led(value_analogRead);
-  move_motor(MyServo, value_analogRead);
-}
-void output_to_led(int value) {
-  int new_value=map(value,0,MAX_READING,0,255);
-  analogWrite(led_pin,new_value);
-}
-void move_motor(Servo motor, int value){
-  int new_value=map(value,0,MAX_READING,0,255);
-  motor.write(new_value);
-}
-						</code></pre>
-						<hr />
-
-						<h3>Assembling the robot</h3>
-						<p>To assemble the robot, we looked at previous designs and decided the cleanest design with the parts available. We chose a laser-cut plexiglass with a breadboard glued to it, to facilitate the connections with the Arduino.</p>
-						<img src="images/Lab1/parts.jpg"/>
-						<p>Next, we attached the servo mounts and the servos themselves. We tried using the 3D-printed battery holders, but they were too large for the battery and didn’t provide the sturdiness we expected. In turn, we temporarily used a zip-tie.</p>
-						<img src="images/Lab1/servos.jpg"/>
-						<p>We assembled the wheels to the servos with no issues. However, the ball bearing was too short, so we had to use the plastic extension shown in the picture. We are going to 3D-print a new ball bearing, because the extension causes undesirable wiggling that could lead to instability and malfunctions later in the project.</p>
-						<p>We next mounted the Arduino (partially on top of the breadboard) and used 2 plastic extensions, nuts and bolts to provide the desired stability, as shown below.</p>
-						<img src="images/Lab1/final_prototype.jpg"/>
-						<hr />
-
-						<h3>Make the Robot Go!</h3>
-						<p>Now using what we have done to run the motors, we can use it to control two motors to move in a square.</p> 
-						<p><b>Reminder</b>Understand how to make servos move forward and backward in different velocity.</p>
-						<iframe src="https://www.youtube.com/embed/J6l1jtC9Hv0" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-						<p>[Code for this step]</p>
-						<pre><code>
-#include <'Servo.h>
-int MAX_READING = 1023;
-int analog_pin = A0;
-int led_pin = 11;
-int leftServo_pin = 5;
-int rightServo_pin = 6;
-Servo leftServo;
-Servo rightServo;
-
-void start_now() {
-  Serial.begin(9600);
-  pinMode(analog_pin, INPUT);
-  pinMode(led_pin, OUTPUT);
-  leftServo.attach(leftServo_pin);
-  rightServo.attach(rightServo_pin); //check pin
-}
-void setup() {
-  start_now();
-}
-void loop() {
-  int motor_value = 180;
-  move_motor(leftServo, 180);
-  move_motor(rightServo, 180);
-  delay(635);
-  move_forward();
-  delay(1000);
-}
-void output_to_led(int value) {
-  int new_value=map(value,0,MAX_READING,0,255); //scale to PWM range
-  analogWrite(led_pin,new_value);
-}
-void move_motor(Servo motor, int value){
-  motor.write(value);
-}
-void move_forward(){
-  move_motor(leftServo, 0);
-  move_motor(rightServo,180);
-}
-						</code></pre>
-						<hr />
-
-						<h3>Extra step</h3>
-						<p><b>If you want to make more things in lab. The following would be a great reference.</b></p> 
-						<p>The modification I added since we had extra time was a basic microphone circuit. This was done before realizing this is very similar to the next lab. Regardless, I guess we are ahead of the game.</p>
-						<img src="images/Lab1/shematic.PNG"/>
-						<p>The way the circuit works is as follows. The signal starts at the microphone. One leg of the microphone is pulled up to 5 volts through a resistor, the other is set to ground. When sound hits the microphone the microphone alternates the voltage on its pulled up leg as a direct representation of the sound. I then isolate the AC component  by passing it through a capacitor. This signal then goes to the noninverting side of an LM358 op amp. In this case we use a 25k resistor and a 50 ohm resistor to amplify by a factor of 501.</p>
-						<p>If we left it like this we would have a detectable signal. Unfortunately this signal would vary between about +-2.5 volts, so we add a DC offset through two 1k resistors to the noninverting input of the op amp. I also added a capacitor in line with the 50 ohms resistor to make it so the dc offset is not amplified. I then fed this signal to the analog input of the Arduino Uno. This signal is sampled at a rate of 9.5kHz until 128 samples are collected. The way I have it currently setup it can easily detect a signal anywhere between 100hz and 4.25khz. I had to “detach” the servos while sampling or else the PWM interrupts would interfere with sampling.</p>
-						<iframe src="https://www.youtube.com/embed/ufud2p73alA" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-						<p>From there frequency of the whistle is used to control whether the robot is moving straight, turning, or stopped, depending on how high the frequency is.</p>
-						<p>[Code for this step]</p>
-						<pre><code>
-#include "arduinoFFT.h"
-arduinoFFT FFT = arduinoFFT();
-#include <'Servo.h>
-Servo leftServo;
-Servo rightServo;
-#define CHANNEL A0
-const uint16_t samples = 128;
-const double samplingFrequency = 9000; //sample rate
-
-unsigned int sampling_period_us;
-unsigned long microseconds;
-double vReal[samples];
-double vImag[samples];
-
-#define SCL_INDEX 0x00
-#define SCL_TIME 0x01
-#define SCL_FREQUENCY 0x02
-#define SCL_PLOT 0x03
-
-void setup()
-{
-  int leftServo_pin = 5;
-  int rightServo_pin = 6;
-  sampling_period_us = round(1000000 * (1.0 / samplingFrequency));
-  Serial.begin(115200);
-}
-
-void loop()
-{
-  leftServo.detach(); //Detach the servos so that the PPM interrupt doesnt interfere with sampling
-  rightServo.detach();
-  delay(30);
-  for (int i = 0; i < samples; i++)
-  {
-    microseconds = micros();
-    vReal[i] = analogRead(A0);
-    vImag[i] = 0;
-    while (micros() < (microseconds + sampling_period_us)) {
-    }
-  }
-  leftServo.attach(9); //reattach the servos
-  rightServo.attach(10);
-  FFT.Windowing(vReal, samples, FFT_WIN_TYP_HAMMING, FFT_FORWARD);  //Weigh data
-  FFT.Compute(vReal, vImag, samples, FFT_FORWARD); //Compute FFT 
-  FFT.ComplexToMagnitude(vReal, vImag, samples); //Compute magnitudes 
-  delay(10);
-  double f = FFT.MajorPeak(vReal, samples, samplingFrequency); //find the dominant frequency
-  int mag = vReal[(int)(f * samples / samplingFrequency)]; //find the magnitude of dominant frequency
-  if (mag > 300) { // filter out lower volume frequencies. That way someone talking won't make it turn right 
-    if (f < 1300) {
-      turn_right();   // if whistle frequecny is lower than 1300 hz, turn right
-    }
-    else if (f > 1900) { //if whistle frequency is higher than 1900 hz, turn left
-      turn_left();
-    }
-    else {   // if whistle frequency is somehwere in between, go straight
-      go_forward();
-    }
-  }
-  else { //if there is no whistle, stop
-    stop_now();
-  }
-  delay(20);
-}
-
-void move_motor(Servo motor, int value) {
-  motor.write(value);
-}
-void go_forward() {
-  move_motor(leftServo, 0);
-  move_motor(rightServo, 180);
-}
-
-
-void turn_right() {
-  move_motor(leftServo, 180);
-  move_motor(rightServo, 180);
-}
-
-void turn_left() {
-  move_motor(leftServo, 0);
-  move_motor(rightServo, 0);
-}
-
-void stop_now() {
-  move_motor(leftServo, 95);
-  move_motor(rightServo, 90);
-}
-						</code></pre>
 						<ul class="actions">
 							<li><a href="#" class="button primary">Back to top</a></li>
 						</ul>
