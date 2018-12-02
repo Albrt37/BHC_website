@@ -56,27 +56,17 @@
 						<p>Translated to robot-world, that would mean that every time we call IDS, DFS is limited to a certain depth. Hence, the algorithm performs DFS with a BFS flavour. Refer to the image below for a graphical representation of how the nodes would be explored:</p>
 						<img src="images/Milestone3/ids.png">
 
-						<p>Here's some of the code:</p>
-						<pre><code>
-// the setup function runs once when you press reset or power the board
-void setup() {
-  // initialize digital pin LED_BUILTIN as an output.
-  pinMode(LED_BUILTIN, OUTPUT);
-}
+						<p>The full code for this section was rather long. <a href="code_repo.html#lab3">Click here</a> to see it in our code repo.</p>
 
-// the loop function runs over and over again forever
-void loop() {
-  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
-  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making   the voltage LOW
-  delay(1000);                       // wait for a second
-}
-						</code></pre>
+						<p>We first tried on a 3x4 maze:</p>
+						<iframe src="https://www.youtube.com/embed/P6-VrPwXPYc" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
-						<p>Behold our maze exploration capabilities:</p>
-						<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>Then, we changed the configuration of that maze:</p>
+						<iframe src="https://www.youtube.com/embed/H7eEXq4VNGg" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
-						<p>We actually got it to work before we left the lab, but couldn't get a proper video of navigation with radio transmission. If you check back tomorrow you'll see it. #groupof3 #prettyplease</p>
+						<p>Finally, we tried a 4x6 maze that also has a node that could't be reached by using right hand following, proving the robustness of our code:</p>
+						<iframe src="https://www.youtube.com/embed/xZ4pCv62_Sc" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+					
 						<hr />
 
 						<h3>Radio communication</h3>
