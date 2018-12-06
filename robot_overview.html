@@ -1,0 +1,209 @@
+<!DOCTYPE HTML>
+<!--
+	Industrious by TEMPLATED
+	templated.co @templatedco
+	Released for free under the Creative Commons Attribution 3.0 license (templated.co/license)
+-->
+<html>
+	<head>
+		<title>Meet the Cat</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		<meta name="description" content="" />
+		<meta name="keywords" content="" />
+		<link rel="stylesheet" href="assets/css/main.css" />
+	</head>
+	<body class="is-preload">
+
+		<!-- Header -->
+			<header id="header">
+				<a class="logo" href="index.html"></a>
+				<nav>
+					<a href="#menu">Menu</a>
+				</nav>
+			</header>
+
+		<!-- Nav -->
+			<nav id="menu">
+				<ul class="links">
+					<li><a href="index.html">Home</a></li>
+					<li><a href="labs.html">Labs</a></li>
+					<li><a href="milestones.html">Milestones</a></li>
+					<li><a href="logistics.html">Team Logistics</a></li>
+					<li><a href="code_repo.html">Code Repo</a></li>
+				</ul>
+			</nav>
+
+		<!-- Heading -->
+			<div id="heading" >
+				<h1>Meet the Cat</h1>
+			</div>
+
+		<!-- Main -->
+			<section id="main" class="wrapper">
+				<div class="inner">
+					<div class="content">
+						<h3>Final Design Overview</h3>						
+						<img src="images/final_design.jpg">
+
+						<h4>Goals</h4>
+						<p>The goal of this class is to build a robot that:</p>
+							<ul>
+								<li>Starts on a 660Hz tone.</li>
+								<li>Traverse a maze following a white line grid.</li>
+								<li>Detect and avoid walls.</li>
+								<li>Detect and avoid collisions with other robots.</li>
+								<li>Send maze topology via radio frequency to a base station that displays the maze on a GUI.</li>
+								<li>Identify and mark on the GUI treasures (red or blue shapes) using a camera and FPGA for image processing.</li>
+							</ul>
+
+						<h4>Custom frame design</h4>
+						<p>In order to improve the robustness of our robot we designed and used Ian’s 3D printer to make a custom robot frame. This design holds all of our components in place where we would want them and also allows for future flexibility through its many mounting points.</p>
+						<img src="images/Lab2/new_design1.png"/>
+						<img src="images/Lab2/new_design2.png"/>
+
+						<h4>Microphone</h4>
+						<p>First, we designed a circuit which in conjunction to the FFT library, use different signals to trigger different actions in the robot, such as turning right, left, or moving straight.</p>
+
+						<img src="images/Lab1/shematic.PNG"/>
+						<p>The way this circuit works is as follows. The signal starts at the microphone. One leg of the microphone is pulled up to 5 volts through a resistor, the other is set to ground. When sound hits the microphone the microphone alternates the voltage on its pulled up leg as a direct representation of the sound. I then isolate the AC component  by passing it through a capacitor. This signal then goes to the noninverting side of an LM358 op amp. In this case we use a 25k resistor and a 50 ohm resistor to amplify by a factor of 501.</p>
+						<p>If we left it like this we would have a detectable signal. Unfortunately this signal would vary between about +-2.5 volts, so we add a DC offset through two 1k resistors to the noninverting input of the op amp. I also added a capacitor in line with the 50 ohms resistor to make it so the dc offset is not amplified. I then fed this signal to the analog input of the Arduino Uno. This signal is sampled at a rate of 9.5kHz until 128 samples are collected. The way I have it currently setup it can easily detect a signal anywhere between 100hz and 4.25khz. I had to “detach” the servos while sampling or else the PWM interrupts would interfere with sampling.</p>
+						<iframe src="https://www.youtube.com/embed/ufud2p73alA" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+						<p>From there frequency of the whistle is used to control whether the robot is moving straight, turning, or stopped, depending on how high the frequency is. <a href="code_repo.html#lab1">Click here</a> to see full code for this part.</p>
+						<p>Then, during <a href="lab2.html">Lab 2</a> we modified the code to detect only sound signals of approximately 660Hz. <a href="code_repo.html#lab2">Click here</a> to see full code for this part.</p></p>
+
+						<h4>Line Following</h4>
+						<p>We used the provided QRE1113 IR sensors with digital output. These sensors work by us first sending a digital pulse to the output. We then set that same pin to be an input, and time how long it takes to drop back down to logical zero. This is directly proportional to the amount of light the sensor is receiving. We then sample this into an array and convert that data into a one or zero, depending on a threshold. </p>
+						<pre><code>
+long readQD(int pin) { //read from IR sensor
+  pinMode( pin, OUTPUT );
+  digitalWrite( pin, HIGH );
+  delayMicroseconds(10);
+  pinMode(pin, INPUT);
+
+  long time = micros();
+
+  while (digitalRead(pin) == HIGH && ((micros() - time) < 3000));
+  return (micros() - time);
+}
+
+void read_line() {
+  for (int i = 0; i < 5; i++) {
+	line_sens_data_time[i] = readQD(line_sens_pin[i]);
+  }
+}
+
+void conv_to_digi() {
+  for (int i = 0; i < 5; i++) {
+	line_sens_data_digi[i] = (line_sens_data_time[i] < threshold);
+  }
+}
+						</code></pre>
+						<img src="images/Milestone1/sensors.jpg"/>
+						<p>In terms of sensor placement, we chose to place 3 sensors in the front of our robot (one in the center, and two on the sides separated at a distance slightly wider than the tape), aligned with the axis of rotation of the servomotors. However, compared to the picture, the final design was inverted, i.e. the front and the back were reversed and sensors were placed near the ball bearing. The reason behind this decision is that the error correction our robot has to make is increasingly smaller as we place the sensors farther away from the wheels. Observe the improved navigation in the following video:</p>
+						<iframe src="https://www.youtube.com/embed/P6-VrPwXPYc" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+						<h4>Wall detection</h4>
+						<p>We used the provided SHARP IR sensors provided. We proceeded to test the range of the sensors by connecting them to an analog input in the Arduino, and placing pieces of white cardboard in front of them.</p>
+						<p>After checking the sensor worked properly, we proceeded to check the magnitude reading of the sensor at different distances, so that we could set a threshold.</p>
+						<img src="images/Milestone2/graph.PNG">
+						<p>This graph allowed us to set an approximate threshold of magnitude 200. That is, when the robot gets to a corner, the threshold should be low enough that the reading of the sensors will exceed it if there is a wall, and trigger the appropriate action.</p>
+						<p>Two proximity sensors were used for wall-following. We placed one in the front and one in the right. We implemented the following logic to navigate the maze following the walls:</p>
+						<pre><code>
+when the robot is at a corner:
+	if (there is a wall in the right && nothing in the front) go forward;
+	if (there is a wall in the right && a wall in the front) turn left;
+	if (there is no wall in the right) turn right;
+						</code></pre>
+
+						<h4>Robot detection</h4>
+						<p>The IR detection is thoroughly explained in <a href="lab2.html">Lab 2</a>. We added code to signal when the robot has detected the IR hat (simulation of other robot, placed at approximately 5.5 inches above ground) using the LED strip, and instruct the robot to avoid the collision. In our case, we decided that the best course of action was to stop wherever it detects the IR signal, and resume motion once it doesn't detect it.</p>
+						<iframe src="https://www.youtube.com/embed/2fNGnOz1sxw" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+						<h4>Radio</h4>
+						<p>Because the Arduino has a very limited memory (~2KB), we decided to store all the grid's information in a 2D byte array, where the first and second indices represent the column and row respectively, and the value determines the walls we have observed. We use the following convention, for a block in the grid array, the least significant bit represents if the eastern wall is there, the 2nd bit represents the northern wall, 3rd bit western wall, and 4th bit western wall. We have 4 bits unused, that we might utilize later on for treasure information. Also orientation can be 1 if we are facing east, 2 if we are facing north, 4 if we are facing west, and 8 if we are facing south. And this is done so we can easily multiply the boolean output of the front and right sensors by the orientation and embed it in the grid information byte (of course, shifting (or taking the remainder) is needed when the multipication output is greater than 15) so we can have only one line to compute the new block information.</p>
+						<pre><code>
+grid[row][col] |= frontSensor * orientation | rightSensor * orientation * 8 | frontSensor * orientation >> 16 | rightSensor * orientation * 8 >> 16;
+						</code></pre>
+						<p>To transmit the data, we embed the column, row, and information byte (each of these is one byte) into a long (again, one byte of the long remains unused) and transmit it to the radio. We do the embedding by adding (or using bitwise-OR) and then shift it by the desired amount to fit everything.</p>
+						<p>The radios were connected to digital pins 9 to 13, and powered with 3.3V. We had to download the <a href="https://github.com/maniacbug/RF24">RF24 Arduino Library</a> and were given a <a href="https://github.com/CEI-lab/ece3400-2018/blob/master/docs/Solutions/lab4/GettingStarted/GettingStarted.ino">basic sketch</a> as a guide to build our communication protocol.</p>
+						<iframe src="https://www.youtube.com/embed/pBk9capgcr4" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+
+						<h4>Treasure detection</h4>
+						<p>Our team agreed that since there was a high risk of losing more points for false detections than we would have gotten for detected treasures, we should not include the FPGA and camera on our robot. However, you can refer to our <a href="lab4.html">Lab 4</a> to see all the cool work we got to do with image processing.</p>
+
+						<h4>Bill of Materials</h4>
+						<p>By the end, our robot consisted of:</p>
+						<div class="row">
+							<div class="col-6 col-12-small">
+								<ul>
+									<li>1 3d-printed chassis weighing approximately 300 grams. Price: Free =)</li>
+									<li>2 Arduino Uno boards: one for the robot, and one for the remote base station that updates the GUI. Price: <a href="https://www.ebay.com/i/263810558921?chn=ps">$6.41 each</a>.</li>
+									<li>2 Parallax servomotors. Price: <a href="https://www.parallax.com/catalog/motors/servos">$14.99 each</a>.</li>
+									<li>1 Portable Single USB Power Bank 5V/1A 4000mAh. Price: <a href="https://www.ebay.com/i/112614555265?chn=ps">$10.64</a>.</li>
+									<li>1 electret microphone to detect the 660Hz sound that marks the beginning of the competition. Price: <a href="https://www.digikey.com/product-detail/en/cui-inc/CMC-6022-37T/102-4095-ND/6561033?WT.srch=1&gclid=Cj0KCQiAi57gBRDqARIsABhDSMol1OK8dvoQeZXewVbGg1uWoj2_ey9g3U4xF8gz2_kf7wRkhmZbgAEaAtv-EALw_wcB">$1.36</a>.</li>
+									<li>3 Sharp IR distance sensors for wall detection. Price: <a href="https://acroname.com/products/SHARP-GP2D15J0000F-IR-PACKAGE?sku=R49-IR15&gclid=Cj0KCQiAi57gBRDqARIsABhDSMrpTaqkjahArO79q4TnKwSOmhDI-3susc_LjXevXx2mvAz62nqQzn8aAr1nEALw_wcB">$7.00 each</a>.</li>
+									<li>3 QRE1113 digital IR sensors for line following/corner detection. Price: <a href="https://www.sparkfun.com/products/9454">$2.95 each</a>.</li>
+									<li>1 OP598 phototransistor to detect the 6.08kHz IR signal emitted by other robots to avoid collisions. Price: <a href="https://www.digikey.com/products/en?mpart=OP598A&v=365">$0.63</a>.</li>
+									<li>2 Nordic nRF24L01+ transceivers to communicate maze information from the robot to a remote Arduino that updates a GUI with the received information. Price: <a href="https://www.mouser.com/ProductDetail/Nordic-Semiconductor/nRF24L01?qs=yd0qOhnSiDdtPhpOyQGKeQ%3D%3D&gclid=Cj0KCQiAi57gBRDqARIsABhDSMog6otqUcaF2HRNL0XcGVRs3bdkZoYprzrXwFlCvFH-uIHryiZHjdsaAkS_EALw_wcB">$3.64 each</a>.</li>
+									<li>1 MOSFET transistor to isolate the wall IR sensors, because they were causing noise in the sound detection circuit. Price: <a href="https://www.mouser.com/ProductDetail/Infineon-Technologies/IRLB8721PBF?qs=9%252bKlkBgLFf0T58WYx%2FAl5A%3D%3D&gclid=Cj0KCQiAi57gBRDqARIsABhDSMqW6XWyL5N4xpp_GMkpPGy_QVAJceBA3L2_bbWLhB1gBhPt71NC7A4aAnOOEALw_wcB">$0.85</a>.</li>
+									<li>Note that we decided to not include the camera and FPGA to avoid being docked points for false detections.</li>
+									<li>Total estimated cost: $93.41</li>
+								</ul>
+							</div>
+						</div>
+
+						<h4>Final competition analysis</h4>
+						<img src="images/competition.jpg">
+						<p>Our robot didn't perform as well as we would've wanted during the competition, but we identified some issues after the first round, and afterwards reflected over what could have been done better. We arrived to the following conclusions:</p>
+
+						<div class="row">
+							<div class="col-6 col-12-small">
+								<ol>
+									<li>Our robot failed the first round because the front and right wall detecting sensors were shorted out, causing false detections and constantly forcing left turns.</li>
+									<li>During the second round our robot failed to send some nodes to the GUI, which was caused by a defective connection of our radio to the Arduino. The PCB we made left little room for the radio to be connected directly on the digital pins.</li>
+									<li>Our IR detector was so sensitive it was detecting our own IR hat. The sensor positioning (under the hat) was optimal.</li>
+									<li>Our whistle detection was ok. We could have done it less sensitive to minimize false detections.</li>
+									<li>Our maze mapping, turning and line following kicked butt.</li>
+									<li>Our chassis design was by far the coolest.</li>
+									<li>We should have used github as a version controlled method from the beginning of the class. Scattered code was the cause of 50% of our problems</li>
+									<li>Someone stole one of our batteries =(.</li>
+									<li>Collaboration makes this class great.</li>
+									<li>Props to Kirsten and all the TA's (shoutout to Thinesiya and Logan).</li>
+								</ol>
+							</div>
+						</div>
+
+						<ul class="actions">
+							<li><a href="#" class="button primary">Back to top</a></li>
+						</ul>
+					</div>
+				</div>
+			</section>
+
+		<!-- Footer -->
+			<footer id="footer">
+				<div class="inner">
+					<div class="content">
+						<section>
+							<h4>Relevant Links</h4>
+							<ul class="plain">
+								<li><a href="https://github.com/Albrt37/BHC_website"><i class="icon fa-github">&nbsp;</i>Our Github Repository</a></li>
+							</ul>
+						</section>
+					</div>
+					<div class="copyright">
+						&copy; Black_Hat_Cats. Our shirt size is Medium ;)
+					</div>
+				</div>
+			</footer>
+
+		<!-- Scripts -->
+			<script src="assets/js/jquery.min.js"></script>
+			<script src="assets/js/browser.min.js"></script>
+			<script src="assets/js/breakpoints.min.js"></script>
+			<script src="assets/js/util.js"></script>
+			<script src="assets/js/main.js"></script>
+
+	</body>
+</html>
